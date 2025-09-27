@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KPI NQ 57-NQ/TW & KH 01-BCĐTW — Nhập liệu, theo dõi & xuất Excel</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  body{background:#f7f9fc}
+  .card{border:none; box-shadow:0 4px 14px rgba(0,0,0,.06)}
+  .kpi-row input[type="number"]{max-width:120px}
+  .kpi-row .form-control{height:38px}
+  .badge-group{font-weight:600}
+  .sticky-actions{position:sticky; top:0; z-index:1000; background:#f7f9fc; padding-top:.5rem}
+  @media print{
+    .no-print{display:none!important}
+    body{background:#fff}
+    .card{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="sticky-actions no-print">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+      <h1 class="h4 me-auto my-2">Bảng KPI thực hiện NQ 57-NQ/TW & KH 02-BCĐTW</h1>
+      <button id="btn-add-kpi" class="btn btn-outline-primary">+ Thêm chỉ tiêu</button>
+      <button id="btn-save" class="btn btn-success">💾 Lưu</button>
+      <button id="btn-load" class="btn btn-secondary">↻ Khôi phục</button>
+      <button id="btn-export-csv" class="btn btn-warning">⬇️ Xuất Excel (CSV)</button>
+      <button id="btn-print" class="btn btn-outline-dark">🖨️ In báo cáo</button>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Đơn vị/Địa phương</label>
+          <input id="unitName" class="form-control" placeholder="VD: UBND phường … / Huyện … / Tỉnh …">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Kỳ báo cáo</label>
+          <input id="period" class="form-control" placeholder="VD: Năm 2025 / Quý III/2025">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Ngày lập</label>
+          <input id="reportDate" type="date" class="form-control">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bộ lọc nhóm -->
+  <div class="card mb-3 no-print">
+    <div class="card-body">
+      <div class="d-flex flex-wrap gap-2">
+        <span class="badge text-bg-primary badge-group">Nhóm hiển thị:</span>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="tochuc" id="grp1" checked>
+          <label class="form-check-label" for="grp1">I. Tổ chức triển khai</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="tuyentruyen" id="grp2" checked>
+          <label class="form-check-label" for="grp2">II. Tuyên truyền</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="theche" id="grp3" checked>
+          <label class="form-check-label" for="grp3">III. Thể chế/Chính sách</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="bobiemche" id="grp4" checked>
+          <label class="form-check-label" for="grp4">IV. Bộ máy/Biên chế</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="cds" id="grp5" checked>
+          <label class="form-check-label" for="grp5">V. Chuyển đổi số & Dữ liệu</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="ktgs" id="grp6" checked>
+          <label class="form-check-label" for="grp6">VI. Kiểm tra/Giám sát</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="nguonluc" id="grp7" checked>
+          <label class="form-check-label" for="grp7">VII. Nguồn lực & Tài chính</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input grp-toggle" type="checkbox" value="ketqua" id="grp8" checked>
+          <label class="form-check-label" for="grp8">VIII. Kết quả đầu ra & HLND</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bảng KPI -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle" id="kpiTable">
+          <thead class="table-light">
+            <tr>
+              <th style="min-width:210px">Nhóm</th>
+              <th style="min-width:260px">Chỉ tiêu/KPI</th>
+              <th title="Đơn vị tính" style="min-width:120px">ĐVT</th>
+              <th title="Kế hoạch">Plan</th>
+              <th title="Thực hiện">Actual</th>
+              <th>%</th>
+              <th style="min-width:250px">Ghi chú</th>
+              <th class="no-print"></th>
+            </tr>
+          </thead>
+          <tbody id="kpiBody">
+          </tbody>
+          <tfoot>
+            <tr class="table-secondary">
+              <th colspan="3">TỔNG HỢP</th>
+              <th id="sumPlan" class="text-end">0</th>
+              <th id="sumActual" class="text-end">0</th>
+              <th id="avgPercent">0%</th>
+              <th colspan="2"></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Biểu đồ -->
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Tiến độ theo nhóm KPI</div>
+        <div class="card-body">
+          <canvas id="groupChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Cơ cấu thực hiện (Actual)</div>
+        <div class="card-body">
+          <canvas id="pieChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ghi chú cuối -->
+  <div class="card">
+    <div class="card-body">
+      <label class="form-label fw-semibold">Ghi chú/Biện pháp trọng tâm thời gian tới</label>
+      <textarea id="notes" class="form-control" rows="5" placeholder="Nêu rõ kết quả, hạn chế, nguyên nhân, giải pháp, phân công, mốc thời gian…"></textarea>
+    </div>
+  </div>
+
+  <p class="text-center text-muted small my-4">© KPI NQ57/KH02 — bản tĩnh (không cần máy chủ);QB:0354.047.552</p>
+</div>
+
+<script>
+/** ========= CẤU HÌNH NHÓM KPI MẶC ĐỊNH ========= */
+const KPI_GROUPS = [
+  {code:"tochuc",     name:"I. Tổ chức triển khai"},
+  {code:"tuyentruyen",name:"II. Công tác tuyên truyền"},
+  {code:"theche",     name:"III. Thể chế/Chính sách"},
+  {code:"bobiemche",  name:"IV. Tổ chức bộ máy/Biên chế"},
+  {code:"cds",        name:"V. Chuyển đổi số & Dữ liệu"},
+  {code:"ktgs",       name:"VI. Kiểm tra/Giám sát"},
+  {code:"nguonluc",   name:"VII. Nguồn lực & Tài chính"},
+  {code:"ketqua",     name:"VIII. Kết quả đầu ra & HLND"}
+];
+
+// Một số KPI mẫu có thể sửa/xóa/thêm tùy ý
+const DEFAULT_KPIS = [
+  {group:"tochuc", name:"Ban hành kế hoạch triển khai cấp cơ sở", unit:"văn bản", plan:1, actual:0, note:""},
+  {group:"tochuc", name:"Số cuộc họp/phiên làm việc của BCĐ", unit:"cuộc", plan:12, actual:0, note:""},
+  {group:"tuyentruyen", name:"Tin/bài tuyên truyền trên cổng TTĐT", unit:"tin/bài", plan:24, actual:0, note:""},
+  {group:"tuyentruyen", name:"Hội nghị quán triệt đến cơ sở", unit:"cuộc", plan:6, actual:0, note:""},
+  {group:"theche", name:"Rà soát/đề xuất sửa đổi văn bản QPPL", unit:"văn bản", plan:3, actual:0, note:""},
+  {group:"bobiemche", name:"Sắp xếp, kiện toàn đầu mối phòng/ban", unit:"đầu mối", plan:2, actual:0, note:""},
+  {group:"cds", name:"Số thủ tục cung cấp DVCTT mức 4", unit:"TTHC", plan:80, actual:0, note:""},
+  {group:"cds", name:"Tỷ lệ HS giải quyết đúng hạn", unit:"%", plan:100, actual:0, note:""},
+  {group:"ktgs", name:"Cuộc kiểm tra, giám sát chuyên đề", unit:"cuộc", plan:8, actual:0, note:""},
+  {group:"nguonluc", name:"Giải ngân kinh phí theo KH", unit:"tỷ đồng", plan:10, actual:0, note:""},
+  {group:"ketqua", name:"Chỉ tiêu hoàn thành/hoàn thành tốt", unit:"%", plan:100, actual:0, note:""},
+  {group:"ketqua", name:"Mức độ hài lòng người dân/doanh nghiệp", unit:"%", plan:95, actual:0, note:""}
+];
+
+const els = {
+  tbody: document.getElementById('kpiBody'),
+  sumPlan: document.getElementById('sumPlan'),
+  sumActual: document.getElementById('sumActual'),
+  avgPercent: document.getElementById('avgPercent'),
+  notes: document.getElementById('notes'),
+  unitName: document.getElementById('unitName'),
+  period: document.getElementById('period'),
+  reportDate: document.getElementById('reportDate'),
+};
+const storageKey = 'KPI_NQ57_KH01_DATA_v1';
+
+let kpis = [];
+let groupChart, pieChart;
+
+function percent(plan, actual){
+  plan = Number(plan)||0; actual = Number(actual)||0;
+  if(plan<=0 && actual>0) return 100;
+  if(plan<=0) return 0;
+  return Math.min(100, +(actual/plan*100).toFixed(2));
+}
+
+function renderRow(item, idx){
+  const tr = document.createElement('tr');
+  tr.className = 'kpi-row';
+  tr.dataset.group = item.group;
+  tr.innerHTML = `
+    <td>
+      <select class="form-select form-select-sm kpi-group">
+        ${KPI_GROUPS.map(g=>`<option value="${g.code}" ${g.code===item.group?'selected':''}>${g.name}</option>`).join('')}
+      </select>
+    </td>
+    <td><input class="form-control form-control-sm kpi-name" value="${item.name||''}" placeholder="Tên chỉ tiêu"></td>
+    <td><input class="form-control form-control-sm kpi-unit" value="${item.unit||''}" placeholder="ĐVT"></td>
+    <td><input type="number" step="any" class="form-control form-control-sm text-end kpi-plan" value="${item.plan??0}"></td>
+    <td><input type="number" step="any" class="form-control form-control-sm text-end kpi-actual" value="${item.actual??0}"></td>
+    <td class="kpi-pct fw-semibold">${percent(item.plan,item.actual)}%</td>
+    <td><input class="form-control form-control-sm kpi-note" value="${item.note||''}" placeholder="Ghi chú"></td>
+    <td class="no-print text-end">
+      <button class="btn btn-sm btn-outline-danger btn-del">Xóa</button>
+    </td>
+  `;
+  tr.querySelector('.kpi-group').addEventListener('change', e=>{
+    item.group = e.target.value; tr.dataset.group = item.group; update();
+  });
+  tr.querySelector('.kpi-name').addEventListener('input', e=>{ item.name=e.target.value; });
+  tr.querySelector('.kpi-unit').addEventListener('input', e=>{ item.unit=e.target.value; });
+  tr.querySelector('.kpi-plan').addEventListener('input', e=>{ item.plan=+e.target.value; tr.querySelector('.kpi-pct').textContent = percent(item.plan,item.actual)+'%'; updateFooterAndCharts(); });
+  tr.querySelector('.kpi-actual').addEventListener('input', e=>{ item.actual=+e.target.value; tr.querySelector('.kpi-pct').textContent = percent(item.plan,item.actual)+'%'; updateFooterAndCharts(); });
+  tr.querySelector('.kpi-note').addEventListener('input', e=>{ item.note=e.target.value; });
+  tr.querySelector('.btn-del').addEventListener('click', ()=>{
+    kpis.splice(idx,1);
+    update(true);
+  });
+  return tr;
+}
+
+function renderTable(){
+  els.tbody.innerHTML = '';
+  kpis.forEach((item, idx)=> els.tbody.appendChild(renderRow(item, idx)));
+  updateFooterAndCharts();
+}
+
+function updateFooterAndCharts(){
+  // Tổng hợp
+  const sumPlan = kpis.reduce((s,i)=>s+(Number(i.plan)||0),0);
+  const sumActual = kpis.reduce((s,i)=>s+(Number(i.actual)||0),0);
+  const avgPct = kpis.length? Math.round(kpis.reduce((s,i)=> s+percent(i.plan,i.actual),0)/kpis.length):0;
+  els.sumPlan.textContent = new Intl.NumberFormat('vi-VN').format(sumPlan);
+  els.sumActual.textContent = new Intl.NumberFormat('vi-VN').format(sumActual);
+  els.avgPercent.textContent = avgPct + '%';
+
+  // Theo nhóm (trung bình %)
+  const groupMap = {};
+  KPI_GROUPS.forEach(g=> groupMap[g.code]={label:g.name, plan:0, actual:0, pctList:[]});
+  kpis.forEach(i=>{
+    const g = groupMap[i.group] || (groupMap['other']={label:'Khác', plan:0, actual:0, pctList:[]});
+    g.plan += Number(i.plan)||0;
+    g.actual += Number(i.actual)||0;
+    g.pctList.push(percent(i.plan,i.actual));
+  });
+  const labels = [], pctData = [], actualData = [];
+  Object.values(groupMap).forEach(g=>{
+    labels.push(g.label);
+    const avg = g.pctList.length? Math.round(g.pctList.reduce((a,b)=>a+b,0)/g.pctList.length):0;
+    pctData.push(avg);
+    actualData.push(g.actual);
+  });
+
+  // Cập nhật chart cột (%)
+  const barCfg = {
+    type:'bar',
+    data:{ labels, datasets:[{label:'% hoàn thành (TB)', data:pctData}] },
+    options:{ responsive:true, scales:{ y:{ beginAtZero:true, max:100 } } }
+  };
+  if(groupChart){ groupChart.data = barCfg.data; groupChart.update(); }
+  else{ groupChart = new Chart(document.getElementById('groupChart'), barCfg); }
+
+  // Cập nhật chart tròn (Actual)
+  const pieCfg = {
+    type:'pie',
+    data:{ labels, datasets:[{label:'Thực hiện', data:actualData}] },
+    options:{ responsive:true }
+  };
+  if(pieChart){ pieChart.data = pieCfg.data; pieChart.update(); }
+  else{ pieChart = new Chart(document.getElementById('pieChart'), pieCfg); }
+}
+
+function update(preserveScroll=false){
+  const y = window.scrollY;
+  renderTable();
+  if(preserveScroll) window.scrollTo(0,y);
+}
+
+function addRow(item){
+  kpis.push(Object.assign({group:KPI_GROUPS[0].code, name:'', unit:'', plan:0, actual:0, note:''}, item||{}));
+  update(true);
+}
+
+function exportCSV(){
+  const header = ["Nhóm","Chỉ tiêu","ĐVT","Plan","Actual","%","Ghi chú","Đơn vị","Kỳ","Ngày lập"];
+  const unit = (els.unitName.value||'').replaceAll('"','""');
+  const period = (els.period.value||'').replaceAll('"','""');
+  const date = els.reportDate.value||'';
+  const rows = kpis.map(i=>[
+    KPI_GROUPS.find(g=>g.code===i.group)?.name||i.group,
+    i.name||'', i.unit||'',
+    i.plan||0, i.actual||0, percent(i.plan,i.actual),
+    i.note||'', unit, period, date
+  ]);
+  let csv = '\uFEFF' + header.join(',') + '\n' + rows.map(r=>r.map(v=>{
+    if(typeof v==='string'){
+      const s = v.replaceAll('"','""');
+      return `"${s}"`;
+    }
+    return v;
+  }).join(',')).join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  const fname = `KPI_NQ57_KH01_${(period||'report').replace(/\s+/g,'_')}.csv`;
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function save(){
+  const data = {
+    meta:{
+      unit: els.unitName.value||'',
+      period: els.period.value||'',
+      date: els.reportDate.value||'',
+      notes: els.notes.value||'',
+    },
+    kpis
+  };
+  localStorage.setItem(storageKey, JSON.stringify(data));
+  alert('Đã lưu dữ liệu trên trình duyệt (LocalStorage).');
+}
+
+function load(){
+  const raw = localStorage.getItem(storageKey);
+  if(!raw){ alert('Chưa có dữ liệu lưu trước đó.'); return; }
+  try{
+    const data = JSON.parse(raw);
+    els.unitName.value = data.meta?.unit||'';
+    els.period.value = data.meta?.period||'';
+    els.reportDate.value = data.meta?.date||'';
+    els.notes.value = data.meta?.notes||'';
+    kpis = Array.isArray(data.kpis)? data.kpis : [];
+    update();
+  }catch(e){
+    alert('Không đọc được dữ liệu đã lưu.');
+  }
+}
+
+function applyGroupVisibility(){
+  const active = Array.from(document.querySelectorAll('.grp-toggle'))
+    .filter(c=>c.checked).map(c=>c.value);
+  document.querySelectorAll('#kpiBody tr').forEach(tr=>{
+    tr.style.display = active.includes(tr.dataset.group)? '' : 'none';
+  });
+}
+
+document.getElementById('btn-add-kpi').addEventListener('click', ()=> addRow({}));
+document.getElementById('btn-save').addEventListener('click', save);
+document.getElementById('btn-load').addEventListener('click', load);
+document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+document.getElementById('btn-print').addEventListener('click', ()=> window.print());
+document.querySelectorAll('.grp-toggle').forEach(c=> c.addEventListener('change', applyGroupVisibility));
+
+// Khởi tạo
+(function init(){
+  // Ngày lập mặc định hôm nay
+  if(!els.reportDate.value){
+    const today = new Date().toISOString().slice(0,10);
+    els.reportDate.value = today;
+  }
+  // Tải sẵn dữ liệu mẫu (nếu chưa lưu gì)
+  if(!localStorage.getItem(storageKey)){
+    kpis = JSON.parse(JSON.stringify(DEFAULT_KPIS));
+  }else{
+    // hoặc cứ mở trang là load tự động
+    load();
+    return;
+  }
+  update();
+})();
+</script>
+</body>
+</html>
